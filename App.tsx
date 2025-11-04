@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useCallback } from 'react';
 import { facultyData } from './data/faculty_data';
 import type { FacultyPublication } from './types';
@@ -8,12 +7,24 @@ import AddEditModal from './components/AddEditModal';
 import ConfirmationModal from './components/ConfirmationModal';
 
 const App: React.FC = () => {
-  const [publications, setPublications] = useState<FacultyPublication[]>(() => 
-    facultyData
-      .filter(p => p.title && p.year) // Filter out entries without a title or year
-      .map((p, index) => ({ ...p, id: `${p.netID}-${index}` }))
-  );
-  
+  const [publications, setPublications] = useState<FacultyPublication[]>(() => {
+    const saved = localStorage.getItem('publications');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return [];
+      }
+    }
+    return facultyData
+      .filter(p => p.title && p.year)
+      .map((p, index) => ({ ...p, id: `${p.netID}-${index}` }));
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem('publications', JSON.stringify(publications));
+  }, [publications]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPublication, setEditingPublication] = useState<FacultyPublication | null>(null);
@@ -29,6 +40,7 @@ const App: React.FC = () => {
     );
   }, [searchQuery, publications]);
 
+  // Memoized callbacks to prevent prop identity changes
   const handleAddNew = useCallback(() => {
     setEditingPublication(null);
     setIsModalOpen(true);
@@ -43,7 +55,7 @@ const App: React.FC = () => {
     setDeletingPublicationId(id);
     setIsConfirmModalOpen(true);
   }, []);
-  
+
   const handleConfirmDelete = useCallback(() => {
     if (deletingPublicationId) {
       setPublications(pubs => pubs.filter(p => p.id !== deletingPublicationId));
@@ -52,30 +64,34 @@ const App: React.FC = () => {
     }
   }, [deletingPublicationId]);
 
-  const handleSave = useCallback((pub: Omit<FacultyPublication, 'id'> & { id?: string }) => {
-    setPublications(prev => {
-      if (pub.id) { // Editing existing
-        return prev.map(p => p.id === pub.id ? { ...p, ...pub } : p);
-      } else { // Adding new
-        const newPub = { ...pub, id: `new-${Date.now()}` };
-        return [newPub, ...prev];
-      }
-    });
-    setIsModalOpen(false);
-    setEditingPublication(null);
-  }, []);
+  const handleCloseModal = useCallback(() => setIsModalOpen(false), []);
+  const handleSave = useCallback(
+    (pub: Omit<FacultyPublication, 'id'> & { id?: string }) => {
+      setPublications(prev => {
+        if (pub.id) {
+          return prev.map(p => (p.id === pub.id ? { ...p, ...pub } : p));
+        } else {
+          const newPub = { ...pub, id: `new-${Date.now()}` };
+          return [newPub, ...prev];
+        }
+      });
+      setIsModalOpen(false);
+      setEditingPublication(null);
+    },
+    []
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans">
       <Header onAddNew={handleAddNew} onSearchChange={setSearchQuery} />
-      
+
       <main className="container mx-auto px-4 py-8">
         {filteredPublications.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredPublications.map(pub => (
-              <FacultyCard 
-                key={pub.id} 
-                publication={pub} 
+              <FacultyCard
+                key={pub.id}
+                publication={pub}
                 onEdit={() => handleEdit(pub)}
                 onDelete={() => handleDelete(pub.id)}
               />
@@ -89,14 +105,13 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {isModalOpen && (
-        <AddEditModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onSave={handleSave}
-          publication={editingPublication}
-        />
-      )}
+      {/* Always render modal; control visibility via isOpen */}
+      <AddEditModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onSave={handleSave}
+        publication={editingPublication}
+      />
 
       {isConfirmModalOpen && (
         <ConfirmationModal
