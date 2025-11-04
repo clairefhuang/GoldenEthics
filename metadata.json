@@ -1,0 +1,5 @@
+{
+  "name": "GoldenEthics",
+  "description": "A platform to catalog and manage research publications by Notre Dame faculty, starting with the Computer Science and Engineering department. It allows for searching, adding, editing, and deleting publication records.",
+  "requestFramePermissions": []
+}
