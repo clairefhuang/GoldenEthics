@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 
 interface HeaderProps {
     onAddNew: () => void;
@@ -18,7 +18,15 @@ const PlusIcon = () => (
     </svg>
 );
 
-const Header: React.FC<HeaderProps> = ({ onAddNew, onSearchChange }) => {
+const Header: React.FC<HeaderProps> = React.memo(({ onAddNew, onSearchChange }) => {
+    const [searchInput, setSearchInput] = useState('');
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setSearchInput(value);
+        onSearchChange(value);
+    };
+
     return (
         <header className="sticky top-0 z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm shadow-md">
             <div className="container mx-auto px-4 py-4">
@@ -34,7 +42,8 @@ const Header: React.FC<HeaderProps> = ({ onAddNew, onSearchChange }) => {
                             <input
                                 type="text"
                                 placeholder="Search by title, author, year..."
-                                onChange={(e) => onSearchChange(e.target.value)}
+                                value={searchInput}
+                                onChange={handleChange}
                                 className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-800 focus:ring-blue-500 focus:border-blue-500 transition"
                             />
                         </div>
@@ -50,6 +59,6 @@ const Header: React.FC<HeaderProps> = ({ onAddNew, onSearchChange }) => {
             </div>
         </header>
     );
-};
+});
 
 export default Header;
